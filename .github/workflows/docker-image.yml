@@ -1,18 +1,32 @@
-name: Docker Image CI
+name: Build and Push to ECR
 
 on:
   push:
     branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
 
 jobs:
-
-  build:
-
+  build-and-push:
     runs-on: ubuntu-latest
 
+    permissions:
+      id-token: write
+      contents: read
+
     steps:
-    - uses: actions/checkout@v4
-    - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag my-image-name:${{ github.sha }}
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ap-south-1   # change if your region is different
+
+      - name: Login to ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag and push image
+        run: |
+          IMAGE_URI=<your-ecr-uri>
+          docker build -t $IMAGE_URI:${{ github.sha }} .
+          docker push $IMAGE_URI:${{ github.sha }}
