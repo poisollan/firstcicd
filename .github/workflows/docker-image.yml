@@ -1,11 +1,12 @@
-name: Build and Push to ECR
+name: Build Push and Deploy
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
 
 jobs:
-  build-and-push:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     permissions:
@@ -20,19 +21,32 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: us-east-1   # change if your region is different
+          aws-region: us-east-1
 
       - name: Login to ECR
         uses: aws-actions/amazon-ecr-login@v2
 
-        - name: Build, tag and push image
-          run: |
-             IMAGE_URI=845875661014.dkr.ecr.us-east-1.amazonaws.com/mohan-flask-app
+      - name: Build Docker Image
+        run: |
+          docker build -t mohan-flask-app .
 
-             docker build -t $IMAGE_URI:${{ github.sha }} .
-             docker tag $IMAGE_URI:${{ github.sha }} $IMAGE_URI:latest
+      - name: Tag Docker Image
+        run: |
+          docker tag mohan-flask-app:latest 845875661014.dkr.ecr.us-east-1.amazonaws.com/mohan-flask-app:${{ github.sha }}
 
-             docker push $IMAGE_URI:${{ github.sha }}
-             docker push $IMAGE_URI:latest
+      - name: Push Image to ECR
+        run: |
+          docker push 845875661014.dkr.ecr.us-east-1.amazonaws.com/mohan-flask-app:${{ github.sha }}
 
-     
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            docker pull 845875661014.dkr.ecr.us-east-1.amazonaws.com/mohan-flask-app:${{ github.sha }}
+            docker stop flask-app || true
+            docker rm flask-app || true
+            docker run -d -p 80:5000 --name flask-app 845875661014.dkr.ecr.us-east-1.amazonaws.com/mohan-flask-app:${{ github.sha }}
+       
