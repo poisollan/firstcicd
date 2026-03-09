@@ -3,10 +3,11 @@ import os
 
 app = Flask(__name__)
 
-@app.route('/')
-def home():
-    return "Mohan DevOps CI/CD Success"
+ENVIRONMENT = os.environ.get("APP_COLOR", "UNKNOWN")
 
-if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+@app.route("/")
+def home():
+    return f"Active Environment : {ENVIRONMENT}"
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
