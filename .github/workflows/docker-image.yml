@@ -52,5 +52,5 @@ jobs:
             docker stop flask-app || true
             docker rm flask-app || true
 
-            docker run -d -p 80:5000 --name flask-app \
+            docker run -d -p 5000:5000 --name flask-app \
             845875661014.dkr.ecr.us-east-1.amazonaws.com/mohan-flask-app:${{ github.sha }}
